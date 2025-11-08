@@ -2,8 +2,12 @@
   "name": "myproject",
   "version": "1.0.0",
   "scripts": {
+    "start": "node app.js",
     "test": "jest",
     "build": "echo \"Add your build step here\""
+  },
+  "dependencies": {
+    "express": "^4.21.2"
   },
   "devDependencies": {
     "jest": "^30.2.0"

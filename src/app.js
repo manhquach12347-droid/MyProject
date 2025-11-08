@@ -1,5 +1,12 @@
-<<<<<<< HEAD
-console.log('Change from main');
-=======
-console.log('Change from feature-3');
->>>>>>> 50a8a2d (Edit app.js in feature-3)
+const express = require("express");
+const app = express();
+
+const PORT = process.env.PORT || 8080;
+
+app.get("/", (req, res) => {
+  res.send("Hello from Cloud Run!");
+});
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
