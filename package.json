@@ -1,0 +1,11 @@
+{
+  "name": "myproject",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "jest",
+    "build": "echo \"Add your build step here\""
+  },
+  "devDependencies": {
+    "jest": "^30.2.0"
+  }
+}
