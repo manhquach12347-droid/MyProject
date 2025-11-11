@@ -11,7 +11,7 @@ on:
       - main
 
 jobs:
-  # Job 1: Build và Test
+  # Job 1: Build & Test
   build-and-test:
     name: Build & Test (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
@@ -112,7 +112,7 @@ jobs:
           echo "Deployed to: $URL"
 
       - name: Send email notification
-        if: always()  # Chỉ dùng always() tránh lỗi secrets trong if
+        if: always()
         continue-on-error: true
         uses: dawidd6/action-send-mail@v3
         with:
@@ -121,9 +121,9 @@ jobs:
           secure: true
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: CI/CD Pipeline - ${{ job.status }}: ${{ github.repository }}
+          subject: "CI/CD Pipeline - ${{ job.status }}: ${{ github.repository }}"
           to: ${{ secrets.EMAIL_TO }}
-          from: GitHub Actions <${{ secrets.EMAIL_USERNAME }}>
+          from: "GitHub Actions <${{ secrets.EMAIL_USERNAME }}>"
           html_body: |
             <h2>CI/CD Pipeline Report</h2>
             <p><strong>Repository:</strong> ${{ github.repository }}</p>
@@ -135,7 +135,7 @@ jobs:
             <p><strong>Deployed URL:</strong> ${{ steps.get-url.outputs.url }}</p>
             <p><strong>View Details:</strong> <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Run</a></p>
 
-  # Job 3: Tạo báo cáo tổng hợp
+  # Job 3: Generate summary report
   report:
     name: Generate Summary Report
     runs-on: ubuntu-latest
