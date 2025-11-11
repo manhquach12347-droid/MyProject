@@ -1,6 +1,6 @@
 name: CI/CD Pipeline
 
-# Định nghĩa các sự kiện kích hoạt pipeline
+# Kích hoạt workflow khi push hoặc pull request
 on:
   push:
     branches:
@@ -11,45 +11,37 @@ on:
       - main
 
 jobs:
-  # Job 1: Build và Test - Chạy song song trên nhiều phiên bản Node.js
+  # Job 1: Build và Test
   build-and-test:
     name: Build & Test (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
-    
-    # Strategy matrix: Chạy song song trên nhiều phiên bản Node.js
     strategy:
       matrix:
         node-version: [16, 18, 20]
-      fail-fast: false  # Tiếp tục chạy các job khác dù một job thất bại
+      fail-fast: false
 
     steps:
-      # Bước 1: Checkout mã nguồn từ repository
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      # Bước 2: Thiết lập môi trường Node.js với phiên bản từ matrix
+
       - name: Set up Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'  # Cache node_modules để tăng tốc độ
-      
-      # Bước 3: Cài đặt dependencies
+          cache: 'npm'
+
       - name: Install dependencies
-        run: npm ci  # npm ci nhanh hơn và đảm bảo cài đặt chính xác từ package-lock.json
-      
-      # Bước 4: Chạy kiểm thử tự động
+        run: npm ci
+
       - name: Run tests
         run: npm test
-        continue-on-error: false  # Dừng pipeline nếu test thất bại
-      
-      # Bước 5: Tạo coverage report (nếu có)
+        continue-on-error: false
+
       - name: Generate test coverage
-        if: always()  # Chạy dù test pass hay fail
+        if: always()
         run: npm run test:coverage || true
         continue-on-error: true
-      
-      # Bước 6: Upload coverage reports (artifact)
+
       - name: Upload coverage reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -57,12 +49,10 @@ jobs:
           name: coverage-report-node-${{ matrix.node-version }}
           path: coverage/
           retention-days: 7
-      
-      # Bước 7: Build ứng dụng
+
       - name: Build application
         run: npm run build
-      
-      # Bước 8: Upload build artifacts
+
       - name: Upload build artifacts
         if: success()
         uses: actions/upload-artifact@v4
@@ -77,61 +67,52 @@ jobs:
   deploy:
     name: Deploy to Google App Engine
     runs-on: ubuntu-latest
-    needs: build-and-test  # Chỉ chạy khi tất cả job build-and-test thành công
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'  # Chỉ deploy khi push vào main
-    
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
     steps:
-      # Bước 1: Checkout mã nguồn
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      # Bước 2: Thiết lập Node.js
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-      
-      # Bước 3: Cài đặt dependencies
+
       - name: Install dependencies
         run: npm ci
-      
-      # Bước 4: Build ứng dụng
+
       - name: Build application
         run: npm run build
-      
-      # Bước 5: Xác thực với Google Cloud
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_CREDENTIALS }}
-      
-      # Bước 6: Thiết lập gcloud CLI
+
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
-      
-      # Bước 7: Deploy lên Google App Engine
+
       - name: Deploy to Google App Engine
         uses: google-github-actions/deploy-appengine@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           deliverables: app.yaml
           version: ${{ github.sha }}
-          promote: true  # Tự động promote version mới thành default
-      
-      # Bước 8: Lấy URL ứng dụng đã deploy
+          promote: true
+
       - name: Get deployed URL
         id: get-url
         run: |
           URL="https://${{ secrets.GCP_PROJECT_ID }}.appspot.com"
           echo "url=$URL" >> $GITHUB_OUTPUT
           echo "Deployed to: $URL"
-      
-      # Bước 9: Gửi email báo cáo kết quả (chỉ khi có cấu hình email)
+
       - name: Send email notification
-        if: always() && secrets.EMAIL_TO != '' && secrets.EMAIL_USERNAME != '' && secrets.EMAIL_PASSWORD != ''
+        if: always()  # Chỉ dùng always() tránh lỗi secrets trong if
         continue-on-error: true
         uses: dawidd6/action-send-mail@v3
         with:
@@ -140,8 +121,7 @@ jobs:
           secure: true
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
-          subject: |
-            CI/CD Pipeline - ${{ job.status }}: ${{ github.repository }}
+          subject: CI/CD Pipeline - ${{ job.status }}: ${{ github.repository }}
           to: ${{ secrets.EMAIL_TO }}
           from: GitHub Actions <${{ secrets.EMAIL_USERNAME }}>
           html_body: |
@@ -160,12 +140,12 @@ jobs:
     name: Generate Summary Report
     runs-on: ubuntu-latest
     needs: [build-and-test, deploy]
-    if: always()  # Chạy dù các job khác pass hay fail
-    
+    if: always()
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Generate summary
         run: |
           echo "## CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
