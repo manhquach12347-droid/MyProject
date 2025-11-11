@@ -2,18 +2,12 @@ runtime: nodejs18
 env: standard
 instance_class: F1
 
-# Cấu hình automatic scaling
+# Automatic scaling chỉ dùng min_instances và max_instances
 automatic_scaling:
-  min_instances: 1       # số instance tối thiểu luôn chạy, có thể để 0 nếu muốn tiết kiệm
-  max_instances: 10      # số instance tối đa
-  cool_down_period_sec: 60
-  cpu_utilization:
-    target_utilization: 0.6
+  min_instances: 1   # Số instance tối thiểu luôn chạy
+  max_instances: 10  # Số instance tối đa, tránh cảnh báo từ 3/2025
 
+# Định tuyến tất cả request tới Node.js app
 handlers:
   - url: /.*
     script: auto
-
-# Tùy chọn logging (khuyến nghị)
-beta_settings:
-  cloud_sql_instances: ""
