@@ -1,51 +1,176 @@
 name: CI/CD Pipeline
 
+# Định nghĩa các sự kiện kích hoạt pipeline
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - development
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
-  build:
-    name: Build & Test
+  # Job 1: Build và Test - Chạy song song trên nhiều phiên bản Node.js
+  build-and-test:
+    name: Build & Test (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
+    
+    # Strategy matrix: Chạy song song trên nhiều phiên bản Node.js
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+      fail-fast: false  # Tiếp tục chạy các job khác dù một job thất bại
 
     steps:
+      # Bước 1: Checkout mã nguồn từ repository
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Set up Node.js
+      
+      # Bước 2: Thiết lập môi trường Node.js với phiên bản từ matrix
+      - name: Set up Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
-          node-version: 20
-
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'  # Cache node_modules để tăng tốc độ
+      
+      # Bước 3: Cài đặt dependencies
       - name: Install dependencies
-        run: npm install
-
+        run: npm ci  # npm ci nhanh hơn và đảm bảo cài đặt chính xác từ package-lock.json
+      
+      # Bước 4: Chạy kiểm thử tự động
       - name: Run tests
         run: npm test
+        continue-on-error: false  # Dừng pipeline nếu test thất bại
+      
+      # Bước 5: Tạo coverage report (nếu có)
+      - name: Generate test coverage
+        if: always()  # Chạy dù test pass hay fail
+        run: npm run test:coverage || true
+        continue-on-error: true
+      
+      # Bước 6: Upload coverage reports (artifact)
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report-node-${{ matrix.node-version }}
+          path: coverage/
+          retention-days: 7
+      
+      # Bước 7: Build ứng dụng
+      - name: Build application
+        run: npm run build
+      
+      # Bước 8: Upload build artifacts
+      - name: Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts-node-${{ matrix.node-version }}
+          path: |
+            dist/
+            build/
+          retention-days: 7
 
+  # Job 2: Deploy lên Google Cloud App Engine
   deploy:
     name: Deploy to Google App Engine
     runs-on: ubuntu-latest
-    needs: build  # chỉ chạy nếu job build thành công
-
+    needs: build-and-test  # Chỉ chạy khi tất cả job build-and-test thành công
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'  # Chỉ deploy khi push vào main
+    
     steps:
+      # Bước 1: Checkout mã nguồn
       - name: Checkout code
         uses: actions/checkout@v3
-
+      
+      # Bước 2: Thiết lập Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 20
-
+          node-version: '18'
+          cache: 'npm'
+      
+      # Bước 3: Cài đặt dependencies
       - name: Install dependencies
-        run: npm install
-
-      - name: Deploy to Google App Engine
-        uses: google-github-actions/deploy-appengine@v1
+        run: npm ci
+      
+      # Bước 4: Build ứng dụng
+      - name: Build application
+        run: npm run build
+      
+      # Bước 5: Xác thực với Google Cloud
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_CREDENTIALS }} # secret chứa JSON key của Service Account
-          project_id: your-gcp-project-id
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+      
+      # Bước 6: Thiết lập gcloud CLI
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+      
+      # Bước 7: Deploy lên Google App Engine
+      - name: Deploy to Google App Engine
+        uses: google-github-actions/deploy-appengine@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
           deliverables: app.yaml
+          version: ${{ github.sha }}
+          promote: true  # Tự động promote version mới thành default
+      
+      # Bước 8: Lấy URL ứng dụng đã deploy
+      - name: Get deployed URL
+        id: get-url
+        run: |
+          URL="https://${{ secrets.GCP_PROJECT_ID }}.appspot.com"
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $URL"
+      
+      # Bước 9: Gửi email báo cáo kết quả
+      - name: Send email notification
+        if: always()  # Gửi email dù deploy thành công hay thất bại
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: |
+            CI/CD Pipeline - ${{ job.status }}: ${{ github.repository }}
+          to: ${{ secrets.EMAIL_TO }}
+          from: GitHub Actions <${{ secrets.EMAIL_USERNAME }}>
+          body: |
+            <h2>CI/CD Pipeline Report</h2>
+            <p><strong>Repository:</strong> ${{ github.repository }}</p>
+            <p><strong>Branch:</strong> ${{ github.ref_name }}</p>
+            <p><strong>Commit:</strong> ${{ github.sha }}</p>
+            <p><strong>Author:</strong> ${{ github.actor }}</p>
+            <p><strong>Status:</strong> <span style="color: ${{ job.status == 'success' && 'green' || 'red' }}">${{ job.status }}</span></p>
+            <p><strong>Workflow:</strong> ${{ github.workflow }}</p>
+            <p><strong>Deployed URL:</strong> ${{ steps.get-url.outputs.url }}</p>
+            <p><strong>View Details:</strong> <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Run</a></p>
+          content_type: text/html
+
+  # Job 3: Tạo báo cáo tổng hợp
+  report:
+    name: Generate Summary Report
+    runs-on: ubuntu-latest
+    needs: [build-and-test, deploy]
+    if: always()  # Chạy dù các job khác pass hay fail
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Generate summary
+        run: |
+          echo "## CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Build and Test: ${{ needs.build-and-test.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 Deploy: ${{ needs.deploy.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY

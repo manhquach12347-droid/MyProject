@@ -1,12 +1,13 @@
-const express = require("express");
-const app = express();
+// src/app.js
+const http = require('http');
 
 const PORT = process.env.PORT || 8080;
 
-app.get("/", (req, res) => {
-  res.send("Hello from Cloud Run!");
+const server = http.createServer((req, res) => {
+  res.writeHead(200, {'Content-Type': 'text/plain'});
+  res.end('Hello from MyProject!\n');
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });

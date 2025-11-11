@@ -1,13 +1,27 @@
 {
   "name": "myproject",
   "version": "1.0.0",
+  "description": "Node.js application with CI/CD pipeline for Google Cloud",
+  "main": "src/app.js",
   "scripts": {
-    "start": "node app.js",
+    "start": "node src/app.js",
     "test": "jest",
-    "build": "echo \"Add your build step here\""
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "build": "echo 'Build completed successfully' && echo 'No build step required for this simple Node.js app'"
   },
-  "dependencies": {
-    "express": "^4.21.2"
+  "jest": {
+    "testEnvironment": "node",
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/**/*.test.js"
+    ],
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ]
   },
   "devDependencies": {
     "jest": "^30.2.0"
