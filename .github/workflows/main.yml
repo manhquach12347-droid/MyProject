@@ -129,20 +129,22 @@ jobs:
           echo "url=$URL" >> $GITHUB_OUTPUT
           echo "Deployed to: $URL"
       
-      # Bước 9: Gửi email báo cáo kết quả
+      # Bước 9: Gửi email báo cáo kết quả (chỉ khi có cấu hình email)
       - name: Send email notification
-        if: always()  # Gửi email dù deploy thành công hay thất bại
+        if: always() && secrets.EMAIL_TO != '' && secrets.EMAIL_USERNAME != '' && secrets.EMAIL_PASSWORD != ''
+        continue-on-error: true
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 465
+          secure: true
           username: ${{ secrets.EMAIL_USERNAME }}
           password: ${{ secrets.EMAIL_PASSWORD }}
           subject: |
             CI/CD Pipeline - ${{ job.status }}: ${{ github.repository }}
           to: ${{ secrets.EMAIL_TO }}
           from: GitHub Actions <${{ secrets.EMAIL_USERNAME }}>
-          body: |
+          html_body: |
             <h2>CI/CD Pipeline Report</h2>
             <p><strong>Repository:</strong> ${{ github.repository }}</p>
             <p><strong>Branch:</strong> ${{ github.ref_name }}</p>
@@ -152,7 +154,6 @@ jobs:
             <p><strong>Workflow:</strong> ${{ github.workflow }}</p>
             <p><strong>Deployed URL:</strong> ${{ steps.get-url.outputs.url }}</p>
             <p><strong>View Details:</strong> <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Run</a></p>
-          content_type: text/html
 
   # Job 3: Tạo báo cáo tổng hợp
   report:
