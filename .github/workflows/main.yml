@@ -25,11 +25,11 @@ jobs:
     steps:
       # Bước 1: Checkout mã nguồn từ repository
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       # Bước 2: Thiết lập môi trường Node.js với phiên bản từ matrix
       - name: Set up Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'  # Cache node_modules để tăng tốc độ
@@ -52,7 +52,7 @@ jobs:
       # Bước 6: Upload coverage reports (artifact)
       - name: Upload coverage reports
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-report-node-${{ matrix.node-version }}
           path: coverage/
@@ -65,7 +65,7 @@ jobs:
       # Bước 8: Upload build artifacts
       - name: Upload build artifacts
         if: success()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build-artifacts-node-${{ matrix.node-version }}
           path: |
@@ -83,11 +83,11 @@ jobs:
     steps:
       # Bước 1: Checkout mã nguồn
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       # Bước 2: Thiết lập Node.js
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
@@ -163,7 +163,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Generate summary
         run: |
