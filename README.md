@@ -2,6 +2,8 @@
 
 Dự án mẫu minh họa cách thiết lập pipeline CI/CD hoàn chỉnh với GitHub Actions và triển khai tự động lên Google Cloud App Engine.
 
+> **Cập nhật**: Đã cấu hình email notifications để nhận thông báo khi deploy thành công/thất bại.
+
 ## 🚀 Tính Năng
 
 - ✅ **CI/CD Pipeline** với GitHub Actions
