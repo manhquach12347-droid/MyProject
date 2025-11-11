@@ -131,22 +131,29 @@ jobs:
       
       # Bước 9: Gửi email báo cáo kết quả (chỉ khi có cấu hình email)
       - name: Send email notification
-        if: always() && secrets.EMAIL_TO != '' && secrets.EMAIL_USERNAME != '' && secrets.EMAIL_PASSWORD != ''  
+        if: always() && secrets.EMAIL_TO != '' && secrets.EMAIL_USERNAME != '' && secrets.EMAIL_PASSWORD != ''
         continue-on-error: true
-      uses: dawidd6/action-send-mail@v3
-      with:
-        server_address: smtp.gmail.com
-        server_port: 465
-        secure: true
-        username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: CI/CD Pipeline - ${{ job.status }}: ${{ github.repository }}
-        to: ${{ secrets.EMAIL_TO }}
-        from: GitHub Actions <${{ secrets.EMAIL_USERNAME }}>
-        html_body: |
-          <h2>CI/CD Pipeline Report</h2>
-          <p><strong>Status:</strong> <span style="color: ${{ job.status == 'success' && 'green' || 'red' }}">${{ job.status }}</span></p>
-
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: |
+            CI/CD Pipeline - ${{ job.status }}: ${{ github.repository }}
+          to: ${{ secrets.EMAIL_TO }}
+          from: GitHub Actions <${{ secrets.EMAIL_USERNAME }}>
+          html_body: |
+            <h2>CI/CD Pipeline Report</h2>
+            <p><strong>Repository:</strong> ${{ github.repository }}</p>
+            <p><strong>Branch:</strong> ${{ github.ref_name }}</p>
+            <p><strong>Commit:</strong> ${{ github.sha }}</p>
+            <p><strong>Author:</strong> ${{ github.actor }}</p>
+            <p><strong>Status:</strong> <span style="color: ${{ job.status == 'success' && 'green' || 'red' }}">${{ job.status }}</span></p>
+            <p><strong>Workflow:</strong> ${{ github.workflow }}</p>
+            <p><strong>Deployed URL:</strong> ${{ steps.get-url.outputs.url }}</p>
+            <p><strong>View Details:</strong> <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View Run</a></p>
 
   # Job 3: Tạo báo cáo tổng hợp
   report:
